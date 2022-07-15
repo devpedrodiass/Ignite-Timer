@@ -1,37 +1,71 @@
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Play } from "phosphor-react";
-import { useForm } from "react-hook-form";
-import * as zod from "zod";
+import { HandPalm, Play } from "phosphor-react";
+import { useEffect, useState } from "react";
+import Countdown from "./components/Countdown";
+import NewCycleForm from "./components/NewCycleForm";
 import {
-  CountdownContainer,
-  FormContainer,
   HomeContainer,
-  MinutesAmountInput,
-  Separator,
   StartCountdownButton,
-  TaskInput,
+  StopCountdownButton,
 } from "./styles";
 
-const newCycleFormValidationSchema = zod.object({
-  task: zod.string().min(1, "Type a task"),
-  minutesAmount: zod.number().min(5).max(60),
-});
-
-type NewCycleFormData = zod.infer<typeof newCycleFormValidationSchema>;
+interface Cycle {
+  id: string;
+  task: string;
+  minutesAmount: number;
+  startDate: Date;
+  interruptedDate?: Date;
+  finishedDate?: Date;
+}
 
 export default function Home() {
-  const { register, handleSubmit, watch, reset } = useForm<NewCycleFormData>({
-    resolver: zodResolver(newCycleFormValidationSchema),
-    defaultValues: {
-      task: "",
-      minutesAmount: 0,
-    },
-  });
+  const [cycles, setCycles] = useState<Cycle[]>([]);
+  const [activeCycleId, setActiveCycleId] = useState<string | null>(null);
 
-  function handleCreateNewCycle(data: NewCycleFormData) {
-    console.log(data);
+  const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId);
+
+  function handleCreateNewCycle({ task, minutesAmount }: NewCycleFormData) {
+    const id = String(new Date().getTime());
+    const newCycle: Cycle = {
+      id,
+      task,
+      minutesAmount,
+      startDate: new Date(),
+    };
+
+    setCycles((state) => [...state, newCycle]);
+    setActiveCycleId(id);
+    setAmountSecondsPassed(0);
     reset();
   }
+
+  function handleInterruptCycle() {
+    setCycles(
+      cycles.map((cycle) => {
+        if (cycle.id === activeCycleId) {
+          return {
+            ...cycle,
+            interruptedDate: new Date(),
+          };
+        }
+        return cycle;
+      })
+    );
+    setActiveCycleId(null);
+  }
+
+  const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0;
+
+  const minutesAmount = Math.floor(currentSeconds / 60);
+  const secondsAmout = currentSeconds % 60;
+
+  const minutes = String(minutesAmount).padStart(2, "0");
+  const seconds = String(secondsAmout).padStart(2, "0");
+
+  useEffect(() => {
+    if (activeCycle) {
+      document.title = `${minutes}:${seconds}`;
+    }
+  }, [minutes, seconds, activeCycle]);
 
   const task = watch("task");
   const isSubmitDisabled = !task;
@@ -39,48 +73,25 @@ export default function Home() {
   return (
     <HomeContainer>
       <form onSubmit={handleSubmit(handleCreateNewCycle)}>
-        <FormContainer>
-          <label htmlFor="task"> Im going to work on</label>
-          <TaskInput
-            id="task"
-            type="text"
-            placeholder="Give a name to your project"
-            list="task-suggestions"
-            {...register("task")}
-          />
-          <datalist id="task-suggestions">
-            <option value="Projeto1"></option>
-            <option value="Projeto2"></option>
-            <option value="Projeto3"></option>
-            <option value="banana"></option>
-          </datalist>
+        <NewCycleForm></NewCycleForm>
 
-          <label htmlFor="minutesAmount">for</label>
-          <MinutesAmountInput
-            type="number"
-            id="minutesAmount"
-            placeholder="00"
-            step={5}
-            min={5}
-            max={60}
-            {...register("minutesAmount", { valueAsNumber: true })}
-          />
+        <Countdown></Countdown>
 
-          <span>minutes.</span>
-        </FormContainer>
-
-        <CountdownContainer>
-          <span>0</span>
-          <span>0</span>
-          <Separator>:</Separator>
-          <span>0</span>
-          <span>0</span>
-        </CountdownContainer>
-
-        <StartCountdownButton disabled={isSubmitDisabled} type="submit">
-          <Play size={24} />
-          Start
-        </StartCountdownButton>
+        {activeCycle ? (
+          <StopCountdownButton
+            disabled={isSubmitDisabled}
+            type="button"
+            onClick={() => handleInterruptCycle()}
+          >
+            <HandPalm size={24} />
+            Stop
+          </StopCountdownButton>
+        ) : (
+          <StartCountdownButton disabled={isSubmitDisabled} type="submit">
+            <Play size={24} />
+            Start
+          </StartCountdownButton>
+        )}
       </form>
     </HomeContainer>
   );
