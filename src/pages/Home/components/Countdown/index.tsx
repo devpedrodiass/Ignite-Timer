@@ -1,10 +1,31 @@
 import { differenceInSeconds } from "date-fns";
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
+import { CyclesContext } from "../../../../contexts/CyclesContext";
 import { CountdownContainer, Separator } from "./styles";
 
 export default function Countdown() {
-  const [amountSecondsPassed, setAmountSecondsPassed] = useState<number>(0);
+  const {
+    activeCycle,
+    activeCycleId,
+    markCurrentCycleAsFinished,
+    amountSecondsPassed,
+    setSecondsPassed,
+  } = useContext(CyclesContext);
   const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0;
+
+  const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0;
+
+  const minutesAmount = Math.floor(currentSeconds / 60);
+  const secondsAmout = currentSeconds % 60;
+
+  const minutes = String(minutesAmount).padStart(2, "0");
+  const seconds = String(secondsAmout).padStart(2, "0");
+
+  useEffect(() => {
+    if (activeCycle) {
+      document.title = `${minutes}:${seconds}`;
+    }
+  }, [minutes, seconds, activeCycle]);
 
   useEffect(() => {
     let interval: number;
@@ -12,31 +33,28 @@ export default function Countdown() {
       interval = setInterval(() => {
         const secondsDifference = differenceInSeconds(
           new Date(),
-          activeCycle.startDate
+          new Date(activeCycle.startDate)
         );
         if (secondsDifference >= totalSeconds) {
-          setCycles((state) =>
-            state.map((cycle) => {
-              if (cycle.id === activeCycleId) {
-                return {
-                  ...cycle,
-                  finishedDate: new Date(),
-                };
-              }
-              return cycle;
-            })
-          );
-          setAmountSecondsPassed(totalSeconds);
+          markCurrentCycleAsFinished();
+          setSecondsPassed(totalSeconds);
           clearInterval(interval);
         } else {
-          setAmountSecondsPassed(secondsDifference);
+          setSecondsPassed(secondsDifference);
         }
       }, 1000);
     }
     return () => {
       clearInterval(interval);
     };
-  }, [activeCycle, totalSeconds, activeCycleId]);
+  }, [
+    activeCycle,
+    totalSeconds,
+    activeCycleId,
+    markCurrentCycleAsFinished,
+    setSecondsPassed,
+  ]);
+
   return (
     <CountdownContainer>
       <span>{minutes[0]}</span>

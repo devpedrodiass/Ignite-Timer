@@ -1,24 +1,13 @@
+import { useContext } from "react";
 import { FormContainer, MinutesAmountInput, TaskInput } from "./styles";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useForm } from "react-hook-form";
-import * as zod from "zod";
-
-const newCycleFormValidationSchema = zod.object({
-  task: zod.string().min(1, "Type a task"),
-  minutesAmount: zod.number().min(1).max(60),
-});
-
-type NewCycleFormData = zod.infer<typeof newCycleFormValidationSchema>;
+import { useFormContext } from "react-hook-form";
+import { CyclesContext } from "../../../../contexts/CyclesContext";
 
 function NewCycleForm() {
-  const { register, handleSubmit, watch, reset } = useForm<NewCycleFormData>({
-    resolver: zodResolver(newCycleFormValidationSchema),
-    defaultValues: {
-      task: "",
-      minutesAmount: 0,
-    },
-  });
+  const { activeCycle, cycles } = useContext(CyclesContext);
+  const { register } = useFormContext();
+
   return (
     <FormContainer>
       <label htmlFor="task"> Im going to work on</label>
@@ -31,10 +20,11 @@ function NewCycleForm() {
         {...register("task")}
       />
       <datalist id="task-suggestions">
-        <option value="Projeto1"></option>
-        <option value="Projeto2"></option>
-        <option value="Projeto3"></option>
-        <option value="banana"></option>
+        {cycles.map((cycle) => (
+          <option key={cycle.id} value={cycle.task}>
+            {cycle.task}
+          </option>
+        ))}
       </datalist>
 
       <label htmlFor="minutesAmount">for</label>
@@ -44,7 +34,7 @@ function NewCycleForm() {
         placeholder="00"
         disabled={!!activeCycle}
         step={5}
-        min={1}
+        min={5}
         max={60}
         {...register("minutesAmount", { valueAsNumber: true })}
       />
